@@ -26,7 +26,7 @@ class ErrorApi extends Error {
   }
 }
 
-async function api(ruta, metodo = 'GET', body) {
+async function api(ruta, metodo = 'GET', body, { requiereSesion = false } = {}) {
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (metodo !== 'GET' && sesion) headers['X-CSRF-Token'] = sesion.csrf;
@@ -43,6 +43,7 @@ async function api(ruta, metodo = 'GET', body) {
   }
   const datos = await respuesta.json().catch(() => null);
   if (!respuesta.ok || datos === null) {
+    if (respuesta.status === 401 && requiereSesion) recuperarAcceso();
     throw new ErrorApi(respuesta.status, datos?.error || 'El servidor no respondió con datos válidos.');
   }
   return datos;
@@ -83,6 +84,21 @@ function actualizarSesion(nueva) {
   sesion = nueva;
   $('enlace-cuenta').textContent = sesion ? 'Mi cuenta' : 'Ingresar';
   $('enlace-admin').hidden = sesion?.usuario.rol !== 'admin';
+}
+
+function recuperarAcceso() {
+  const { nombre, id } = rutaActual();
+  const plan = planElegido ?? id;
+  regresarDespuesDeIngresar = nombre === 'elegir' ? 'elegir' + (plan ? '/' + plan : '') : '';
+  actualizarSesion(null);
+  // Oculta los controles protegidos mientras se muestra el ingreso.
+  $('form-membresia').hidden = true;
+  $('form-consulta').hidden = true;
+  $('panel-admin').hidden = true;
+  $('confirmacion-baja').hidden = true;
+  if (nombre === 'cuenta') pintarCuenta();
+  else location.hash = 'cuenta';
+  aviso('estado-ingreso', 'Tu sesión venció. Ingresá nuevamente para continuar.', 'error');
 }
 
 async function cargarSesion() {
@@ -340,7 +356,7 @@ async function navegar(moverFoco = true) {
       if (revision !== revisionVista) return;
       pintarCuenta();
       if (sesion?.usuario.rol === 'socio') {
-        const historial = await api('membresias.php');
+        const historial = await api('membresias.php', 'GET', undefined, { requiereSesion: true });
         if (revision !== revisionVista) return;
         pintarHistorial(historial);
       }
@@ -431,7 +447,7 @@ alEnviar('form-registro', 'estado-registro', async (form) => {
   await ingresar({ email, clave }, form);
 });
 $('cerrar-sesion').addEventListener('click', () => accion($('cerrar-sesion'), 'estado-cuenta', async () => {
-  await api('login.php', 'DELETE');
+  await api('login.php', 'DELETE', undefined, { requiereSesion: true });
   actualizarSesion(null);
   $('form-ingreso').reset();
   $('form-registro').reset();
@@ -473,7 +489,7 @@ alEnviar('form-membresia', 'estado-compra', async (form) => {
     const bytes = crypto.getRandomValues(new Uint8Array(16));
     solicitud = { firma, id: Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('') };
   }
-  const { membresia } = await api('membresias.php', 'POST', { ...datos, solicitud: solicitud.id });
+  const { membresia } = await api('membresias.php', 'POST', { ...datos, solicitud: solicitud.id }, { requiereSesion: true });
   if (location.hash !== ruta) return;
   $('form-membresia').hidden = true;
   aviso('estado-elegir', 'Membresía #' + membresia.id + ' registrada. Total: ' + moneda.format(membresia.total) + '.');
@@ -483,14 +499,14 @@ alEnviar('form-membresia', 'estado-compra', async (form) => {
 });
 
 alEnviar('form-consulta', 'estado-consulta', async (form) => {
-  const datos = await api('consultas.php', 'POST', { plan_id: detalleId, ...datosFormulario(form) });
+  const datos = await api('consultas.php', 'POST', { plan_id: detalleId, ...datosFormulario(form) }, { requiereSesion: true });
   form.reset();
   aviso('estado-consulta', datos.mensaje + ' Número: ' + datos.id + '.', 'exito');
 });
 
 alEnviar('form-plan', 'estado-editor', async (form) => {
   const id = editarId;
-  await api(id ? 'planes.php?id=' + id : 'planes.php', id ? 'PUT' : 'POST', datosFormulario(form));
+  await api(id ? 'planes.php?id=' + id : 'planes.php', id ? 'PUT' : 'POST', datosFormulario(form), { requiereSesion: true });
   peticionPlanes = undefined;
   abrirEditor(null);
   await obtenerPlanes();
@@ -503,7 +519,7 @@ $('cancelar-baja').addEventListener('click', () => {
   $('lista-admin').querySelector('button')?.focus();
 });
 $('confirmar-baja').addEventListener('click', () => accion($('confirmar-baja'), 'estado-lista-admin', async () => {
-  await api('planes.php?id=' + eliminarId, 'DELETE');
+  await api('planes.php?id=' + eliminarId, 'DELETE', undefined, { requiereSesion: true });
   peticionPlanes = undefined;
   $('confirmacion-baja').hidden = true;
   if (editarId === eliminarId) abrirEditor(null);

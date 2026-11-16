@@ -9,15 +9,15 @@
 
 Los enlaces apuntan a los aportes de Santiago en las actividades anteriores que sirven de base a la AE4. Si la cátedra pide un commit propio de esta etapa, Santiago puede mejorar los mensajes del catálogo en `pintarTarjetas()` para distinguir entre catálogo vacío, filtros sin coincidencias y un solo resultado. Para verificarlo, puede probar `renovacion`, una búsqueda sin coincidencias y un catálogo vacío en una base local de prueba.
 
-## Franco Olexyn · tarea pendiente
+## Franco Olexyn · aporte implementado y probado localmente
 
 **Recuperar el acceso cuando vence la sesión durante una operación.**
 
-1. Revisá `api()`, `cargarSesion()` y los flujos protegidos en [`public/js/app.js`](../public/js/app.js). Hoy, si cerrás sesión en otra pestaña con la misma cuenta y confirmás una operación en la primera, podés recibir un 401 con el formulario anterior todavía visible.
-2. Implementá la transición al ingreso cuando una operación protegida devuelve 401. Si el socio estaba eligiendo un plan, conservá la ruta de selección para poder continuar después de ingresar. Verificá que una clave incorrecta siga mostrando su aviso en el formulario de ingreso.
-3. Abrí la cuenta en dos pestañas, cerrá la sesión en la segunda y enviá una selección de plan desde la primera. Comprobá que vuelva al ingreso y que, al autenticarte de nuevo, puedas continuar con el mismo plan. Anotá los pasos y el resultado real en `docs/pruebas-franco-sesion.md`.
+1. En [`public/js/app.js`](../public/js/app.js), las operaciones protegidas identifican sus llamadas con `requiereSesion`. Ante un 401, la interfaz limpia la sesión, oculta los controles protegidos y muestra Ingresar con un aviso.
+2. Si el socio estaba eligiendo una membresía, se conserva el plan realmente seleccionado para regresar después de ingresar. Una clave incorrecta mantiene su aviso en el formulario de ingreso; la consulta anónima de sesión permite seguir navegando por las vistas públicas.
+3. Se verificaron el cierre de sesión desde otra pestaña, la clave incorrecta, el retorno al plan y la confirmación real de la membresía con PHP y MariaDB. Los pasos, resultados y límites del entorno están en [`pruebas-franco-sesion.md`](pruebas-franco-sesion.md).
 
-Rama sugerida `aporte/franco-sesion`. Mensaje sugerido `Recuperar el acceso al vencer la sesión`.
+Rama de trabajo `codex/franco-sesion`. Mensaje del cambio `Recuperar el acceso al vencer la sesión`.
 
 ## Santino Martins · tarea pendiente
 
